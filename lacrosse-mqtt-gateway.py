@@ -177,7 +177,8 @@ def publish(sensor_name, data):
     print_line('Status messages published', console=False, sd_notify=True)
 
 # Load configuration file
-config_dir = parse_args.config_dir
+# config_dir = parse_args.config_dir
+config_dir = '/app'
 
 config = ConfigParser(delimiters=('=', ), inline_comment_prefixes=('#'))
 config.optionxform = str
@@ -198,6 +199,10 @@ daemon_enabled = config['Daemon'].getboolean('enabled', True)
 
 base_topic = config['MQTT'].get('base_topic', "homeassistant").lower()
 device_id = config['MQTT'].get('homie_device_id', 'lacrosse-mqtt-daemon').lower()
+publish_interval = config['MQTT'].getint('publish_interval', 10)
+min_publish_interval = config['MQTT'].getint('min_publish_interval', 60)
+temperature_threshold = config['MQTT'].getfloat('temperature_threshold', 0.2)
+humidity_threshold = config['MQTT'].getfloat('humidity_threshold', 0.5)
 
 # Check configuration
 if not config['Sensors']:

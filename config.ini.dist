@@ -34,6 +34,18 @@
 # Maximum period in seconds between ping messages to the broker. (Default: 60)
 #keepalive = 60
 
+# Minimal time interval that has to be passed until publishing to MQTT occurs. (Default: 10)
+#publish_interval = 10
+
+# Interval at which a status will be definitively published to MQTT. (Default: 60)
+#min_publish_interval = 60
+
+# Minimal change in temperature required before publishing to MQTT. (Default: 0.2)
+#temperature_threshold = 0.2
+
+# Minimal change in humidity required befre publishing to MQTT. (Default: 0.5)
+#humidity_threshold = 0.5
+
 # The MQTT base topic to publish all Lacrosse sensor data topics under.
 # Default depends on the configured reporting_method
 #base_topic = lacrosse
