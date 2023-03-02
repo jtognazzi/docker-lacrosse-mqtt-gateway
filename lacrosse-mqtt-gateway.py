@@ -155,24 +155,24 @@ def clean_identifier(name):
     return clean
 
 # Eclipse Paho callbacks - http://www.eclipse.org/paho/clients/python/docs/#callbacks
-def on_connect(client, userdata, flags, rc):
+def on_connect(mqtt_client, userdata, flags, rc):
     if rc == 0:
-        print_line('MQTT connection established', console=True, sd_notify=True)
+        print_line('MQTT connection established succesfully', console=True, sd_notify=True)
+        print_line('Connection attempt returned: '.format(mqtt.connack_string(rc)), console=False)
         print()
     else:
-        print_line('Connection error with result code {} - {}'.format(str(rc), mqtt.connack_string(rc)), error=True)
+        print_line('Connection error with result code {} - {}'.format(str(rc), mqtt.connack_string(rc)), console= True, error=True)
         #kill main thread
         os._exit(1)
 
-
-def on_publish(client, userdata, mid):
-    #print_line('Data successfully published.')
+def on_publish(mqtt_client, userdata, mid):
+    #print_line('Data successfully published.', console=True)
     pass
 
 def publish(sensor_name, data):
     print_line('Publishing to MQTT topic "{}/sensor/{}/state"'.format(base_topic, sensor_name.lower()))
     mqtt_client.publish('{}/sensor/{}/state'.format(base_topic, sensor_name.lower()), json.dumps(data))
-    sleep(0.5) # some slack for the publish roundtrip and callback function
+    sleep(0.05) # some slack for the publish roundtrip and callback function
     print()
     print_line('Status messages published', console=False, sd_notify=True)
 
@@ -236,6 +236,10 @@ try:
 except:
     print_line('MQTT connection error. Please check your settings in the configuration file "config.ini"', error=True, sd_notify=True)
     sys.exit(1)
+
+# Starting main loop to assurre successful publishing and working callbacks
+# https://stackoverflow.com/questions/36422376/paho-python-mqtt-client-connects-successfully-but-on-connect-callback-is-not-inv
+mqtt_client.loop_start()
 
 sd_notifier.notify('READY=1')
 
