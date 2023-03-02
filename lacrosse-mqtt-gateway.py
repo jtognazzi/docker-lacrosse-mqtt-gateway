@@ -281,8 +281,8 @@ for [name, device_id] in config['Sensors'].items():
 
     sensors[name_clean] = LaCrosseSensor(lacrosse, device_id, name)
 
-print_line('Announcing Lacrosse devices to MQTT broker for auto-discovery ...')
-for [sensor_name, lacrosse] in sensors.items():
+def announce_device(sensor_name, lacrosse):
+    print_line('ID: {}'.format(lacrosse.device_id.lower()))
     state_topic = '{}/sensor/{}/state'.format(base_topic, sensor_name.lower())
     for [sensor, params] in parameters.items():
         discovery_topic = 'homeassistant/sensor/{}/{}/config'.format(sensor_name.lower(), sensor)
@@ -302,8 +302,16 @@ for [sensor_name, lacrosse] in sensors.items():
                 'name' : lacrosse.name,
                 'model' : 'Lacrosse Sensor',
         }
+        print_line('Discovery topic: {}'.format(discovery_topic))
+        print_line('State topic: {}'.format(state_topic))
         print_line('Payload: {}'.format(json.dumps(payload)))
-        mqtt_client.publish(discovery_topic, json.dumps(payload), 1, True)
+        print()
+        mqtt_client.publish(discovery_topic, json.dumps(payload), 2, True)
+        sleep(0.1)
+
+print_line('Announcing Lacrosse devices to MQTT broker for auto-discovery ...')
+for [sensor_name, lacrosse] in sensors.items():
+    announce_device(sensor_name, lacrosse)
 
 print_line('Initialization complete, starting MQTT publish loop', console=False, sd_notify=True)
 
