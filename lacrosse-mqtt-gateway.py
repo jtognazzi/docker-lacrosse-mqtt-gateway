@@ -15,6 +15,7 @@ from configparser import ConfigParser
 from unidecode import unidecode
 import paho.mqtt.client as mqtt
 import sdnotify
+import math
 from signal import signal, SIGPIPE, SIG_DFL
 signal(SIGPIPE,SIG_DFL)
 
@@ -37,6 +38,8 @@ class LaCrosseSensor:
     _humidity = None
     _low_battery = None
     _new_battery = None
+    _read_time = 0
+    _published_time = 0
 
     def __init__(self, lacrosse, device_id, name):
         """Initialize the sensor."""
@@ -70,10 +73,17 @@ class LaCrosseSensor:
 
     def _callback_lacrosse(self, lacrosse_sensor, user_data):
         """Handle a function that is called from pylacrosse with new values."""
+        last_read_time = self._read_time
+        last_published_time = self._published_time
+        last_temperature = self._temperature
+        last_humidity = self._humidity
+        last_battery = self._low_battery
+
         self._temperature = lacrosse_sensor.temperature
         self._humidity = lacrosse_sensor.humidity
         self._low_battery = lacrosse_sensor.low_battery
         self._new_battery = lacrosse_sensor.new_battery
+        self._read_time = time()
         print_line('Retrieving data from sensor "{}" ...'.format(self._name))
 
         data = OrderedDict()
@@ -84,8 +94,32 @@ class LaCrosseSensor:
         else:
           data["battery"]= 100
         print_line('Result: {}'.format(json.dumps(data)))
-        publish(self._name_clean, data)
 
+        push_mqtt = False
+
+        if (last_temperature is not None) & (last_humidity is not None):
+          time_passed = math.ceil(self._read_time - last_read_time)
+          published_time_passed = math.ceil(time() - last_published_time)
+          temperature_change = self._temperature - last_temperature
+          humidity_change = self._humidity - last_humidity
+
+          print_line('Time passed: {}, PublishedTime passed: {}, DeltaTemp: {:.1f}, DeltaHumidity: {:.1f}'.format(time_passed, published_time_passed, temperature_change, humidity_change))
+
+          if ( ((time_passed >= publish_interval) &
+               ((temperature_change >= temperature_threshold) | (humidity_change >= humidity_threshold))) |
+               (published_time_passed >= min_publish_interval)
+             ):
+            push_mqtt = True
+        else:
+            push_mqtt = True
+
+        if (push_mqtt):
+          print_line('Publishing data to MQTT...')
+          self._published_time = time()
+          publish(self._name_clean, data)
+        else:
+          print_line('No data will be sent to MQTT...')
+          print()
 
 # Argparse
 parser = argparse.ArgumentParser(description=project_name, epilog='For further details see: ' + project_url)
