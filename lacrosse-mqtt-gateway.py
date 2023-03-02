@@ -75,10 +75,6 @@ class LaCrosseSensor:
         self._low_battery = lacrosse_sensor.low_battery
         self._new_battery = lacrosse_sensor.new_battery
         print_line('Retrieving data from sensor "{}" ...'.format(self._name))
-        print_line('Temperature: "{}" ...'.format(self._temperature))
-        print_line('Humidity: "{}" ...'.format(self._humidity))
-        print_line('Low-Battery "{}" ...'.format(self._low_battery))
-        print_line('New-Battery "{}" ...'.format(self._new_battery))
 
         data = OrderedDict()
         data["temperature"]= self._temperature
