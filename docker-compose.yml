@@ -1,0 +1,15 @@
+version: '3.3' 
+services:
+  lacrosse-mqtt:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        progress: plain      
+    container_name: lacrosse-mqtt
+    group_add:
+      - dialout
+    volumes:
+      - ./config.ini:/app/config.ini:ro
+    devices:
+      - /dev/serial/by-id/usb-FTDI_FT232R_USB_UART_D8JKU78H-if33-port0:/dev/ttyUSB0
