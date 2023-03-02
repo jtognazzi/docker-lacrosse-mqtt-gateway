@@ -6,15 +6,11 @@ import sys
 import re
 import json
 import os.path
-import argparse
 from time import time, sleep, localtime, strftime
 from collections import OrderedDict
-from colorama import init as colorama_init
-from colorama import Fore, Style
 from configparser import ConfigParser
 from unidecode import unidecode
 import paho.mqtt.client as mqtt
-import sdnotify
 import math
 from signal import signal, SIGPIPE, SIG_DFL
 signal(SIGPIPE,SIG_DFL)
@@ -117,23 +113,8 @@ class LaCrosseSensor:
           print_line('No data will be sent to MQTT...')
           print()
 
-# Argparse
-parser = argparse.ArgumentParser(description=project_name, epilog='For further details see: ' + project_url)
-parser.add_argument('--config_dir', help='set directory where config.ini is located', default=sys.path[0])
-parse_args = parser.parse_args()
-
-# Intro
-colorama_init()
-print(Fore.GREEN + Style.BRIGHT)
-print(project_name)
-print('Source:', project_url)
-print(Style.RESET_ALL)
-
-# Systemd Service Notifications - https://github.com/bb4242/sdnotify
-sd_notifier = sdnotify.SystemdNotifier()
-
 # Logging function
-def print_line(text, error = False, warning=False, sd_notify=False, console=True):
+def print_line(text, error=False, warning=False, console=True):
     timestamp = strftime('%Y-%m-%d %H:%M:%S', localtime())
     if console:
         if error:
@@ -142,9 +123,6 @@ def print_line(text, error = False, warning=False, sd_notify=False, console=True
             print(Fore.YELLOW + '[{}] '.format(timestamp) + Style.RESET_ALL + '{}'.format(text) + Style.RESET_ALL)
         else:
             print(Fore.GREEN + '[{}] '.format(timestamp) + Style.RESET_ALL + '{}'.format(text) + Style.RESET_ALL)
-    timestamp_sd = strftime('%b %d %H:%M:%S', localtime())
-    if sd_notify:
-        sd_notifier.notify('STATUS={} - {}.'.format(timestamp_sd, unidecode(text)))
 
 # Identifier cleanup
 def clean_identifier(name):
@@ -157,7 +135,7 @@ def clean_identifier(name):
 # Eclipse Paho callbacks - http://www.eclipse.org/paho/clients/python/docs/#callbacks
 def on_connect(mqtt_client, userdata, flags, rc):
     if rc == 0:
-        print_line('MQTT connection established succesfully', console=True, sd_notify=True)
+        print_line('MQTT connection established succesfully', console=True)
         print_line('Connection attempt returned: '.format(mqtt.connack_string(rc)), console=False)
         print()
     else:
@@ -174,7 +152,7 @@ def publish(sensor_name, data):
     mqtt_client.publish('{}/sensor/{}/state'.format(base_topic, sensor_name.lower()), json.dumps(data))
     sleep(0.05) # some slack for the publish roundtrip and callback function
     print()
-    print_line('Status messages published', console=False, sd_notify=True)
+    print_line('Status messages published', console=False)
 
 # Load configuration file
 # config_dir = parse_args.config_dir
@@ -186,7 +164,7 @@ try:
     with open(os.path.join(config_dir, 'config.ini')) as config_file:
         config.read_file(config_file)
 except IOError:
-    print_line('No configuration file "config.ini"', error=True, sd_notify=True)
+    print_line('No configuration file "config.ini"', error=True)
     sys.exit(1)
 
 used_adapter = config['General'].get('adapter', '/dev/ttyUSB0')
@@ -206,10 +184,10 @@ humidity_threshold = config['MQTT'].getfloat('humidity_threshold', 0.5)
 
 # Check configuration
 if not config['Sensors']:
-    print_line('No sensors found in configuration file "config.ini"', error=True, sd_notify=True)
+    print_line('No sensors found in configuration file "config.ini"', error=True)
     sys.exit(1)
 
-print_line('Configuration accepted', console=False, sd_notify=True)
+print_line('Configuration accepted', console=False)
 
 # MQTT connection
 print_line('Connecting to MQTT broker ...')
@@ -239,21 +217,19 @@ try:
                         port=int(os.environ.get('MQTT_PORT', config['MQTT'].get('port', '1883'))),
                         keepalive=config['MQTT'].getint('keepalive', 60))
 except:
-    print_line('MQTT connection error. Please check your settings in the configuration file "config.ini"', error=True, sd_notify=True)
+    print_line('MQTT connection error. Please check your settings in the configuration file "config.ini"', error=True)
     sys.exit(1)
 
 # Starting main loop to assurre successful publishing and working callbacks
 # https://stackoverflow.com/questions/36422376/paho-python-mqtt-client-connects-successfully-but-on-connect-callback-is-not-inv
 mqtt_client.loop_start()
 
-sd_notifier.notify('READY=1')
-
 # Initialize Lacrosse sensors
 try:
     lacrosse = pylacrosse.LaCrosse(used_adapter, 57600)
     lacrosse.open()
 except SerialException as exc:
-    print_line("Unable to open serial port: %s".format(exc), error=True, sd_notify=True)
+    print_line("Unable to open serial port: %s".format(exc), error=True)
     sys.exit(1)
 
 if toggle_interval is not None:
@@ -270,7 +246,7 @@ lacrosse.start_scan()
 sensors = OrderedDict()
 for [name, device_id] in config['Sensors'].items():
     if not re.match("[0-9]{1,2}", device_id.lower()):
-        print_line('The Device-ID "{}" seems to be in the wrong format. Please check your configuration'.format(device_id), error=True, sd_notify=True)
+        print_line('The Device-ID "{}" seems to be in the wrong format. Please check your configuration'.format(device_id), error=True)
         sys.exit(1)
 
     if '@' in name:
@@ -318,21 +294,13 @@ print_line('Announcing Lacrosse devices to MQTT broker for auto-discovery ...')
 for [sensor_name, lacrosse] in sensors.items():
     announce_device(sensor_name, lacrosse)
 
-print_line('Initialization complete, starting MQTT publish loop', console=False, sd_notify=True)
+print_line('Initialization complete, starting MQTT publish loop', console=False)
 
 sleep_period = 300
 
 # Sensor data retrieval and publication
 while True:
-    print_line('Status messages published', console=False, sd_notify=True)
-
-    if daemon_enabled:
-        print_line('Sleeping ({} seconds) ...'.format(sleep_period))
-        sleep(sleep_period)
-        print()
-    else:
-        print_line('Execution finished in non-daemon-mode', sd_notify=True)
-        if reporting_mode == 'mqtt-json':
-            mqtt_client.disconnect()
-        break
-
+    print_line('Status messages published', console=False)
+    print_line('Sleeping ({} seconds) ...'.format(sleep_period))
+    sleep(sleep_period)
+    print()
