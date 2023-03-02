@@ -28,10 +28,6 @@ parameters = OrderedDict([
     ("battery", dict(name="Battery", name_pretty='Sensor Battery Level', typeformat='%d', unit='%', device_class="battery"))
 ])
 
-if False:
-    # will be caught by python 2.7 to be illegal syntax
-    print('Sorry, this script requires a python3 runtime environment.', file=sys.stderr)
-
 class LaCrosseSensor:
     """Implementation of a Lacrosse sensor."""
     _temperature = None
