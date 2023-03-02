@@ -118,11 +118,11 @@ def print_line(text, error=False, warning=False, console=True):
     timestamp = strftime('%Y-%m-%d %H:%M:%S', localtime())
     if console:
         if error:
-            print(Fore.RED + Style.BRIGHT + '[{}] '.format(timestamp) + Style.RESET_ALL + '{}'.format(text) + Style.RESET_ALL, file=sys.stderr)
+            print('[{}] - {}'.format(timestamp, text), file=sys.stderr)
         elif warning:
-            print(Fore.YELLOW + '[{}] '.format(timestamp) + Style.RESET_ALL + '{}'.format(text) + Style.RESET_ALL)
+            print('[{}] - {}'.format(timestamp, text))
         else:
-            print(Fore.GREEN + '[{}] '.format(timestamp) + Style.RESET_ALL + '{}'.format(text) + Style.RESET_ALL)
+            print('[{}] - {}'.format(timestamp, text))
 
 # Identifier cleanup
 def clean_identifier(name):
