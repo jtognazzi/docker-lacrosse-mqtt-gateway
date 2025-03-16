@@ -1,4 +1,4 @@
-FROM python:3.9-slim-bullseye
+FROM python:slim-bullseye
 
 # ###############################################################################
 # #### ----                    Create user environemt                    --- ####

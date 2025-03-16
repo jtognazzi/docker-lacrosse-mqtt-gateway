@@ -19,8 +19,8 @@ project_name = 'Lacrosse MQTT Client/Daemon/Gateway'
 project_url = 'https://github.com/deveth0/lacrosse-mqtt-gateway'
 
 parameters = OrderedDict([
-    ("temperature", dict(name="Temperature", name_pretty='Humidity', typeformat='%.1f', unit='°C', device_class="temperature")),
-    ("humidity", dict(name="Humidity", name_pretty='Humidity', typeformat='%f', unit='%', device_class="humidity")),
+    ("temperature", dict(name="Temperature", name_pretty='Temperature', typeformat='%.1f', unit='°C', device_class="temperature", state_class="measurement")),
+    ("humidity", dict(name="Humidity", name_pretty='Humidity', typeformat='%f', unit='%', device_class="humidity", state_class="measurement")),
     ("battery", dict(name="Battery", name_pretty='Sensor Battery Level', typeformat='%d', unit='%', device_class="battery"))
 ])
 
@@ -268,12 +268,14 @@ def announce_device(sensor_name, lacrosse):
     for [sensor, params] in parameters.items():
         discovery_topic = 'homeassistant/sensor/{}/{}/config'.format(sensor_name.lower(), sensor)
         payload = OrderedDict()
-        payload['name'] = "{} {}".format(lacrosse.name, sensor.title())
+        payload['name'] = "{}".format(sensor.title())
         payload['unique_id'] = "{}-{}".format(lacrosse.name.lower(), sensor)
         if 'unit' in params:
             payload['unit_of_measurement'] = params['unit']
         if 'device_class' in params:
             payload['device_class'] = params['device_class']
+        if 'state_class' in params:
+            payload['state_class'] = params['state_class']
         payload['state_topic'] = state_topic
         payload['value_template'] = "{{{{ value_json.{} }}}}".format(sensor)
         payload['device'] = {
